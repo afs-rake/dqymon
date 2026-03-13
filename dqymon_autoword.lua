@@ -1,11 +1,5 @@
 --[[
-    Dqymon Auto-Word V28 (Deep Research Edition)
-    
-    Massive Fixes:
-    - UI Overlap Fix: Memperbaiki bug ListLayout yang hancur sehingga teks menumpuk.
-    - Deep Scanner: Membaca teks hingga ke dalam descendant UI untuk memastikan prompt terdeteksi.
-    - Time-State Retype: Menggantikan deteksi "X Merah" dengan sistem yang jauh lebih akurat (Jika prompt tidak berganti selama 2 detik = Salah/Ditolak -> Auto Retype).
-    - Perfect Backspace: Jeda VIM disesuaikan agar tidak menumpuk ketikan.
+    Dqymon Auto-Word V28
 ]]
 
 local success, err = pcall(function()
@@ -89,7 +83,6 @@ local success, err = pcall(function()
         task.wait(0.015) 
     end
 
-    -- Hapus manual via Text property jika memungkinkan, lalu fallback ke VIM Backspace
     local function forceClearTextBoxes()
         for _, g in ipairs(lplr.PlayerGui:GetDescendants()) do
             if g:IsA("TextBox") and g.Visible then
@@ -98,7 +91,6 @@ local success, err = pcall(function()
         end
     end
 
-    -- SMART CLEAR
     local function clearGameInput(charsToDelete)
         if not settings.autoClear then return end
         forceClearTextBoxes()
@@ -108,7 +100,7 @@ local success, err = pcall(function()
             if unloaded then break end
             simKeyPress(Enum.KeyCode.Backspace)
         end
-        task.wait(0.2) -- Jeda aman agar tidak bertabrakan dengan ketikan baru
+        task.wait(0.2)
     end
 
     local function TypeText(text)
@@ -164,14 +156,12 @@ local success, err = pcall(function()
         return results
     end
 
-    -- DEEP PROMPT DETECTOR V28
+    -- DEEP PROMPT DETECTOR
     local function getPromptInfo()
         local detected = ""
         local maxLen = 0
         local isMyTurn = false
         local candidates = {}
-        
-        -- 1. Deteksi via BillboardGui di atas kepala (Paling Akurat)
         if lplr.Character then
             for _, desc in ipairs(workspace:GetDescendants()) do
                 if desc:IsA("BillboardGui") and desc.Adornee and (desc.Adornee == lplr.Character or desc.Adornee:IsDescendantOf(lplr.Character)) then
@@ -187,14 +177,11 @@ local success, err = pcall(function()
                 end
             end
         end
-
-        -- 2. Deteksi via Layar Utama (Deep Hierarchy Scan)
         for _, g in ipairs(lplr.PlayerGui:GetDescendants()) do
             if g:IsDescendantOf(sg) then continue end
             if (g:IsA("TextLabel") or g:IsA("TextBox")) and g.Visible and g.Text ~= "" then
                 local rawText = g.Text:lower()
                 if rawText:find("hurufnya") or rawText:find("mulai dari") or rawText:find("awalnya") then
-                    -- Telusuri dari Parent untuk mencari huruf tantangan yang disembunyikan di label terpisah
                     if g.Parent then
                         for _, nearby in ipairs(g.Parent:GetDescendants()) do
                             if (nearby:IsA("TextLabel") or nearby:IsA("TextBox")) and nearby ~= g and nearby.Visible then
@@ -210,7 +197,7 @@ local success, err = pcall(function()
         end
 
         if #candidates > 0 and not isMyTurn then
-            isMyTurn = true -- Asumsikan giliran kita jika ada prompt di layar
+            isMyTurn = true 
         end
 
         for _, cand in ipairs(candidates) do
@@ -234,7 +221,7 @@ local success, err = pcall(function()
     mainFrame.Position = UDim2.new(0.5, -140, 0.5, -210)
     mainFrame.BackgroundColor3 = Color3.fromRGB(15, 12, 18)
     mainFrame.BorderSizePixel = 0
-    mainFrame.ClipsDescendants = true -- [FIX] Mencegah UI meluber keluar frame
+    mainFrame.ClipsDescendants = true
     Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 10)
     local mainStroke = Instance.new("UIStroke", mainFrame)
     mainStroke.Color = Color3.fromRGB(150, 0, 255)
@@ -286,7 +273,6 @@ local success, err = pcall(function()
     sugLayout.Padding = UDim.new(0, 2)
     sugLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     
-    -- [FIX] Membersihkan UI dengan aman
     local function clearSug()
         for _, c in ipairs(suggestionFrame:GetChildren()) do 
             if not c:IsA("UIListLayout") then 
@@ -466,7 +452,7 @@ local success, err = pcall(function()
                                 TypeText(word:sub(#prompt + 1))
                             end)
                             
-                            lastTypeTime = tick() -- Catat waktu kita ngetik
+                            lastTypeTime = tick()
                             updateSug(prompt)
                         else
                             infoText.Text = "Habis: " .. prompt:upper()
@@ -475,13 +461,11 @@ local success, err = pcall(function()
                         end
                         
                     elseif prompt == lastPrompt then
-                        -- Jika kita sudah ngetik, tapi 2.2 detik kemudian giliran belum ganti (prompt sama)
-                        -- Artinya jawaban kita DITOLAK atau TYPO! Langsung Retype.
                         if tick() - lastTypeTime > 2.2 then
                             forceRetypeNextTick = true
                             infoText.Text = "Ditolak! Auto-Retrying..."
                             infoText.TextColor3 = Color3.fromRGB(255, 100, 100)
-                            lastTypeTime = tick() -- Reset waktu agar tidak spam loop
+                            lastTypeTime = tick()
                         end
                     end
                 else
@@ -495,7 +479,6 @@ local success, err = pcall(function()
         end
     end)
 
-    -- Manual Input Focus Logic
     inputBox.FocusLost:Connect(function(enterPressed)
         if enterPressed and inputBox.Text ~= "" and not isTyping then
             local pattern = inputBox.Text:lower()
